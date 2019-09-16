@@ -1,0 +1,37 @@
+on property:sys.fingerprint.boot=goodix_5126b
+    chown system system /dev/goodix_fp
+    chmod 0644 /dev/goodix_fp
+    enable gf5126b_fpd
+    enable biometrics-fingerprint-goodix-2-0
+
+# Notified from goodix-restart-counter-sh
+on property:sys.fingerprint.restart=gf5126b_fpd
+    restart biometrics-fingerprint-goodix-2-0
+
+# Notified from goodix-restart-counter-sh
+on property:sys.fingerprint.reboottimes=5
+    stop gf5126b_fpd
+    stop biometrics-fingerprint-goodix-2-0
+
+service gf5126b_fpd /vendor/bin/gf5126b_fpd
+    class hal
+    user system
+    group system sdcard_rw
+    onrestart restart goodix-restart-counter-sh
+    disabled
+
+# "class hal" causes a race condition on some devices due to files created
+# in /data. As a workaround, postpone startup until later in boot once
+# /data is mounted.
+service biometrics-fingerprint-goodix-2-0 /vendor/bin/hw/vendor.vivo.hardware.biometrics.fingerprint@2.0-service-gf5126b
+    class main
+    user system
+    group system input
+    disabled
+
+# Make sys.fingerprint.reboottimes +1
+service goodix-restart-counter-sh /system/vendor/bin/sh /vendor/bin/init.vivo.fingerprint_restart_counter.sh gf5126b_fpd 5
+    user system
+    group system
+    disabled
+    oneshot
